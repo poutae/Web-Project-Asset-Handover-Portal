@@ -1,0 +1,26 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+*.pem
+
+# dotnet
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# node
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# local storage / misc
+/storage/
+*.log
+.DS_Store
