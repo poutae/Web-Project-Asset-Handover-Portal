@@ -11,7 +11,13 @@ public class AuthTests : IClassFixture<PortalFactory>
 
     public AuthTests(PortalFactory factory) => _factory = factory;
 
-    private HttpClient NewClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true, AllowAutoRedirect = false });
+    private HttpClient NewClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions
+    {
+        HandleCookies = true,
+        AllowAutoRedirect = false,
+        // The session cookie is Secure outside Development, so talk to the API over https like a real client.
+        BaseAddress = new Uri("https://localhost"),
+    });
 
     private static SignupRequest NewSignup(string? email = null) =>
         new(email ?? $"{Guid.NewGuid():N}@example.com", "correct horse battery", "Test User", "Acme Agency");
@@ -121,7 +127,8 @@ public class AuthTests : IClassFixture<PortalFactory>
         var response = await NewClient().GetAsync(url);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.StartsWith("/login", response.Headers.Location!.OriginalString.Replace("http://localhost", ""));
+        var location = new Uri(response.RequestMessage!.RequestUri!, response.Headers.Location);
+        Assert.Equal("/login", location.AbsolutePath);
     }
 
     [Fact]
@@ -129,8 +136,8 @@ public class AuthTests : IClassFixture<PortalFactory>
     {
         var url = "/connect/authorize?client_id=portal-web&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fcallback&scope=openid";
         var response = await NewClient().GetAsync(url);
-        // OpenIddict answers with an error redirect back to the client instead of starting the flow.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("error=invalid_request", response.Headers.Location!.OriginalString);
+        // The request is refused outright: no login redirect, no authorization code flow.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(response.Headers.Location);
     }
 }
