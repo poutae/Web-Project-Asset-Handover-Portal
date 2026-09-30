@@ -127,7 +127,7 @@ public class AuthTests : IClassFixture<PortalFactory>
         var response = await NewClient().GetAsync(url);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        var location = new Uri(response.RequestMessage!.RequestUri!, response.Headers.Location);
+        var location = new Uri(response.RequestMessage!.RequestUri!, response.Headers.Location!);
         Assert.Equal("/login", location.AbsolutePath);
     }
 
@@ -138,6 +138,6 @@ public class AuthTests : IClassFixture<PortalFactory>
         var response = await NewClient().GetAsync(url);
         // The request is refused outright: no login redirect, no authorization code flow.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Null(response.Headers.Location);
+        Assert.Null(response.Headers.Location!);
     }
 }
