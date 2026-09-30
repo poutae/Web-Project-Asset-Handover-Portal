@@ -1,0 +1,15 @@
+{
+  "name": "web-project-asset-handover-portal",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm --prefix web install",
+    "dev": "concurrently -n api,web -c blue,green \"dotnet watch --project src/Portal.Api --urls http://localhost:5080\" \"npm --prefix web run dev\"",
+    "build": "dotnet build -c Release && npm --prefix web run build",
+    "test": "dotnet test -c Release && npm --prefix web test",
+    "lint": "npm --prefix web run lint && npm --prefix web run typecheck",
+    "format:check": "dotnet format --verify-no-changes"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
