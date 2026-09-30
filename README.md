@@ -18,14 +18,25 @@ scripts/                  PowerShell helper scripts
 ```
 
 ## Local setup (Windows)
-Prerequisites: .NET 10 SDK, Node 22+, a local Microsoft SQL Server.
+Prerequisites: .NET 10 SDK, Node 22+, a local Microsoft SQL Server (the default `.env.example` uses Windows authentication against `localhost`).
 ```powershell
 ./scripts/setup.ps1   # creates .env from .env.example, restores packages
+./scripts/db-update.ps1  # applies EF Core migrations to the database in .env
 npm run dev           # API on :5080, web on :5173 (proxies /api)
 ```
 Edit `.env` (never committed) and set `ConnectionStrings__Default` to your SQL Server instance. All configuration uses .NET environment-variable names (`ConnectionStrings__Default`, `Portal__PublicBaseUrl`, `Portal__MaxUploadMb`, `Deployment__Enabled`, `Storage__Provider`). Never put secrets in `VITE_*` variables.
 
 Useful commands: `npm run build`, `npm test`, `npm run lint`, `npm run format:check`, `./scripts/check-secrets.ps1`.
+
+## Authentication & OAuth 2.0
+- `POST /api/auth/signup` creates a user plus a new organization (the user becomes its Owner) and signs in; `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
+- Passwords are hashed with ASP.NET Core's `PasswordHasher` (PBKDF2). Sessions use an HttpOnly, SameSite=Lax cookie (`Secure` outside Development). Nothing is stored in localStorage.
+- The portal is an OAuth 2.0 / OpenID Connect server (OpenIddict): `/connect/authorize` and `/connect/token`, authorization-code flow with mandatory PKCE, plus refresh tokens. The first-party client `portal-web` is registered at startup. API endpoints accept either the session cookie or an OAuth bearer token.
+- Outside Development, set `Oidc__SigningCertificatePath` / `Oidc__EncryptionCertificatePath` (+ passwords) to PFX files kept outside the repo; the app refuses to start without them. In Development, keys are ephemeral, so tokens are invalidated on restart.
+- Auth endpoints are rate limited per IP (`Portal__Auth__RateLimitPerMinute`, default 20).
+
+## Testing
+`dotnet test` needs a SQL Server: each run creates and drops a throw-away `PortalTests_*` database. By default it uses `Server=localhost;Trusted_Connection=True`; set `PORTAL_TEST_SQL` (connection string without a database) to override. CI uses a SQL Server service container.
 
 ## Git workflow
 `main` is protected. Every change: branch (`feature/`, `fix/`, `chore/`, `docs/`, `test/`, `ci/`) → Conventional Commits → push → Pull Request → CI → approval → merge → delete branch. Never commit to `main` directly (the single bootstrap commit is the only exception).
@@ -42,4 +53,4 @@ Useful commands: `npm run build`, `npm test`, `npm run lint`, `npm run format:ch
 - **Database:** developers use their own local SQL Server. CI integration tests will use SQL Server provided by GitHub Actions.
 
 ## Known limitations
-Early scaffold: only the health endpoint (`GET /api/health`) and a placeholder React page exist. Auth, tenancy, projects, files, realtime, offline sync and deployments are not implemented yet.
+Early stage: database, organizations/users/memberships and authentication exist. There is no login UI yet (the authorize endpoint redirects to `/login`, which the React app will provide), no invitations, and tenancy query filters, projects, files, realtime, offline sync and deployments are not implemented yet.
